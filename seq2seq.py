@@ -30,9 +30,6 @@ batch_size = 128
 bucket_option = [i for i in range(1, 200, 5)]
 buckets = s2s_reader.create_bucket(bucket_option)
 
-# load the data set into s2s_reader
-# the total bucket numbers = bucket options number ^ 2
-# if clean mode is true, the leftover data in the bucket will be used before the epoch is over
 reader = s2s_reader.reader(file_name = data_path, batch_size = batch_size, buckets = buckets, bucket_option = bucket_option, clean_mode=True)
 vocab_size = len(reader.dict)
 
