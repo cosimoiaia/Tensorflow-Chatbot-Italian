@@ -82,32 +82,32 @@ dec_cell_list=[]
 
 for i in xrange(num_layers):
 
-	single_cell = tf.contrib.rnn.LSTMCell(
+	single_cell = tf.nn.rnn_cell.LSTMCell(
 		num_units=hidden_size, 
 		num_proj=projection_size, 
 		#initializer=tf.truncated_normal_initializer(stddev=truncated_std),
 		state_is_tuple=True
 		)
 	if i < num_layers-1 or num_layers == 1:
-		single_cell = tf.contrib.rnn.DropoutWrapper(cell=single_cell, output_keep_prob=keep_prob)
+		single_cell = tf.nn.rnn_cell.DropoutWrapper(cell=single_cell, output_keep_prob=keep_prob)
 	enc_cell_list.append(single_cell)
 
 for i in xrange(num_layers):
 
-	single_cell = tf.contrib.rnn.LSTMCell(
+	single_cell = tf.nn.rnn_cell.LSTMCell(
 		num_units=hidden_size, 
 		num_proj=projection_size, 
 		#initializer=tf.truncated_normal_initializer(stddev=truncated_std),
 		state_is_tuple=True
 		)
 	if i < num_layers-1 or num_layers == 1:
-		single_cell = tf.contrib.rnn.DropoutWrapper(cell=single_cell, output_keep_prob=keep_prob)
+		single_cell = tf.nn.rnn_cell.DropoutWrapper(cell=single_cell, output_keep_prob=keep_prob)
 	dec_cell_list.append(single_cell)
 
 
 
-enc_cell = tf.contrib.rnn.MultiRNNCell(cells=enc_cell_list, state_is_tuple=True)
-dec_cell = tf.contrib.rnn.MultiRNNCell(cells=dec_cell_list, state_is_tuple=True)
+enc_cell = tf.nn.rnn_cell.MultiRNNCell(cells=enc_cell_list, state_is_tuple=True)
+dec_cell = tf.nn.rnn_cell.MultiRNNCell(cells=dec_cell_list, state_is_tuple=True)
 
 #encoder & decoder defintion
 _, enc_states = tf.nn.dynamic_rnn(cell = enc_cell, 
