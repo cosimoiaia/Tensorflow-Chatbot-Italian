@@ -19,7 +19,7 @@ import util.s2s_reader as s2s_reader
 
 
 data_path = "data"
-model_path = "/output"
+model_path = "output"
 
 expression = r"[0-9]+|[']*[\w]+"
 
@@ -160,7 +160,7 @@ if load_model:
 		reader.epoch = len(losses)+1
 	print("Model restored.")
 else:
-	os.mkdir(save_path)
+	os.makedirs(save_path)
 	sess.run(tf.global_variables_initializer())
 	losses = []
 
@@ -266,11 +266,18 @@ def translate(token_list):
 
 # Let's roll:
 
+# Make a nice progress bar during training
+from tqdm import tqdm
+
 if train:
 	#local variables
 	count = 0
 	epoch_loss = 0
 	epoch_count = 0
+	pbar=tqdm(total=100)
+	pbar.set_description("Epoch 1: Loss: 0 Avg loss: 0 Count: 0")
+
+	print("Training Bot...")
 
 	while True:
 
@@ -281,9 +288,6 @@ if train:
 
 		if reader.epoch != curr_epoch:
 			
-			print("\n----------end of epoch:" + str(reader.epoch-1) + "----------")
-			print("    avg loss: " + str(epoch_loss/epoch_count))
-			print("\n")
 
 			losses.append(epoch_loss/epoch_count)
 
@@ -293,7 +297,6 @@ if train:
 			update_summary(save_path, losses)
 			cwd = os.getcwd()
 			saver.save(sess, save_path+"/model.ckpt")
-			print("Model saved")
 
 			if reader.epoch == (max_epoch+1):
 				break
@@ -306,7 +309,8 @@ if train:
 		epoch_count+=1
 
 		if count%10 == 0:
-			print (str(loss_t) + " @ epoch: " + str(reader.epoch) + " count: "+ str(epoch_count * batch_size) )
+			pbar.update(1)
+			pbar.set_description("Epoch "+str(reader.epoch) +": Loss: " + str(loss_t) + " Avg loss: " +str(epoch_loss/epoch_count) +" Count: "+ str(epoch_count * batch_size))
 else:
 	print("## Il Dottore e' pronto per rispondervi ora: ##")
 	
