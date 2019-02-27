@@ -274,10 +274,11 @@ if train:
 	count = 0
 	epoch_loss = 0
 	epoch_count = 0
+
+	print("Training Bot...")
 	pbar=tqdm(total=100)
 	pbar.set_description("Epoch 1: Loss: 0 Avg loss: 0 Count: 0")
 
-	print("Training Bot...")
 
 	while True:
 
