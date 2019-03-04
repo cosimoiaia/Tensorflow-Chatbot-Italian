@@ -36,7 +36,7 @@ vocab_size = len(reader.dict)
 hidden_size = 512
 projection_size = 300
 embedding_size = 300
-num_layers = 1
+num_layers = 3
 
 # ouput_size for softmax layer
 output_size = projection_size
@@ -44,7 +44,7 @@ output_size = projection_size
 #training params, truncated_norm will resample x > 2std; so when std = 0.1, the range of x is [-0.2, 0.2]
 truncated_std = 0.1
 keep_prob = 0.95
-max_epoch = 10
+max_epoch = 250
 norm_clip = 5
 
 #training params for adam
@@ -54,11 +54,6 @@ adam_learning_rate = 0.001
 #model name & save path
 model_name = "p"+str(projection_size)+"_h"+str(hidden_size)+"_x"+str(num_layers)
 save_path = model_path+"/"+model_name
-
-load_model=False
-train=False
-if not train: 
-	load_model = True
 
 
 ###### MODEL DEFINITION
@@ -80,7 +75,7 @@ dec_inputs_emb = tf.nn.embedding_lookup(emb_weights, dec_inputs, name="dec_input
 enc_cell_list=[]
 dec_cell_list=[]
 
-for i in xrange(num_layers):
+for i in range(num_layers):
 
 	single_cell = tf.nn.rnn_cell.LSTMCell(
 		num_units=hidden_size, 
@@ -92,7 +87,7 @@ for i in xrange(num_layers):
 		single_cell = tf.nn.rnn_cell.DropoutWrapper(cell=single_cell, output_keep_prob=keep_prob)
 	enc_cell_list.append(single_cell)
 
-for i in xrange(num_layers):
+for i in range(num_layers):
 
 	single_cell = tf.nn.rnn_cell.LSTMCell(
 		num_units=hidden_size, 
@@ -152,17 +147,10 @@ top_values, top_indexs = tf.nn.top_k(logit, k = 10, sorted=True)
 #initialization or load model
 saver = tf.train.Saver()
 
-if load_model:
-	cwd = os.getcwd()
-	saver.restore(sess, save_path+"/model.ckpt")
-	with open(save_path+'/summary.json') as json_data:
-		losses = json.load(json_data)
-		reader.epoch = len(losses)+1
-	print("Model restored.")
-else:
-	os.makedirs(save_path)
-	sess.run(tf.global_variables_initializer())
-	losses = []
+
+os.makedirs(save_path)
+sess.run(tf.global_variables_initializer())
+losses = []
 
 
 
@@ -175,81 +163,6 @@ def update_summary(save_path, losses):
 	with open(summary_location, 'w') as outfile:
 		json.dump(losses, outfile)
 
-
-def build_input(sequence):
-	dec_inp = np.zeros((1,len(sequence)))
-	dec_inp[0][:] = sequence
-	return dec_inp.T
-
-def print_sentence(index_list):
-	for index in index_list:
-		sys.stdout.write(reader.id_dict[index])
-		sys.stdout.write(' ')
-	sys.stdout.write('\n')
-
-
-
-def predict(enc_inp):
-	
-	sequence = [2]
-	
-	dec_inp = build_input(sequence)
-
-	candidates = []
-	options = []
-
-	feed_dict = {enc_inputs: enc_inp, dec_inputs:dec_inp}
-	values, indexs, state = sess.run([top_values, top_indexs, dec_states], feed_dict)
-
-	for i in xrange(len(values)):
-		candidates.append([values[i], [indexs[i]]])
-
-	best_sequence = None
-	highest_score = -sys.maxint - 1
-
-
-	while True:
-
-		#print candidates
-		for i in xrange(len(candidates)):
-
-			sequence = candidates[i][1]
-			score = candidates[i][0]
-
-			# if sequence end, evaluate
-			if sequence[-1] == 3 or len(sequence) >= max_sequence_len:
-				if score > highest_score:
-					highest_score = score
-					best_sequence = sequence
-				continue
-
-			# if not, continue searching
-			dec_inp = build_input(sequence)
-
-			feed_dict = {enc_states: state, dec_inputs:dec_inp}
-			values, indexs = sess.run([top_values, top_indexs], feed_dict)
-
-			for j in xrange(len(values)):
-				new_sequence = list(sequence)
-				new_sequence.append(indexs[j])
-				options.append([score+values[j], new_sequence])
-
-		# sort all options and keep top k 
-		options.sort(reverse = True)
-		candidates = []
-
-		for i in xrange(min(len(options), top_k)):
-			if options[i][0] > highest_score:
-				candidates.append(options[i])
-		
-		options = []
-		if len(candidates) == 0:
-			break
-
-	if signal:
-		best_sequence = [signal] + best_sequence
-
-	return best_sequence[:-1]
 
 
 
@@ -270,68 +183,48 @@ def translate(token_list):
 # Make a nice progress bar during training
 from tqdm import tqdm
 
-if train:
-	#local variables
-	count = 0
-	epoch_loss = 0
-	epoch_count = 0
 
-	print("Training Bot...")
-	pbar=tqdm(total=100)
-	pbar.set_description("Epoch 1: Loss: 0 Avg loss: 0 Count: 0")
+#local variables
+count = 0
+epoch_loss = 0
+epoch_count = 0
+
+print("Training Bot...")
+pbar=tqdm(total=max_epoch)
+pbar.set_description("Epoch 1: Loss: 0 Avg loss: 0 Count: 0")
 
 
-	while True:
+while True:
 
-		curr_epoch = reader.epoch
-		data,index = reader.next_batch()
-		
-		enc_inp, dec_inp, dec_tar = s2s_reader.data_processing(data, buckets[index], batch_size)
-
-		if reader.epoch != curr_epoch:
-			
-
-			losses.append(epoch_loss/epoch_count)
-
-			epoch_loss = 0
-			epoch_count = 0
-
-			update_summary(save_path, losses)
-			cwd = os.getcwd()
-			saver.save(sess, save_path+"/model.ckpt")
-
-			if reader.epoch == (max_epoch+1):
-				break
-
-		feed_dict = {enc_inputs: enc_inp, dec_inputs:dec_inp, targets: dec_tar}
-		_, loss_t = sess.run([train_op, avg_loss], feed_dict)
-		epoch_loss += loss_t
-
-		count+=1
-		epoch_count+=1
-
-		if count%10 == 0:
-			pbar.update(1)
-			pbar.set_description("Epoch "+str(reader.epoch) +": Loss: " + str(loss_t) + " Avg loss: " +str(epoch_loss/epoch_count) +" Count: "+ str(epoch_count * batch_size))
-else:
-	print("## Il Dottore e' pronto per rispondervi ora: ##")
+	curr_epoch = reader.epoch
+	data,index = reader.next_batch()
 	
-	while True:
-		try:
-			line = sys.stdin.readline()
-		except KeyboardInterrupt:
-			print("\nsessione conclusa")
+	enc_inp, dec_inp, dec_tar = s2s_reader.data_processing(data, buckets[index], batch_size)
+
+	if reader.epoch != curr_epoch:
+		
+
+		losses.append(epoch_loss/epoch_count)
+
+		epoch_loss = 0
+		epoch_count = 0
+
+		update_summary(save_path, losses)
+		cwd = os.getcwd()
+		saver.save(sess, save_path+"/model.ckpt")
+
+		if reader.epoch == (max_epoch+1):
 			break
 
-		token_list = re.findall(expression, line.lower())
+	feed_dict = {enc_inputs: enc_inp, dec_inputs:dec_inp, targets: dec_tar}
+	_, loss_t = sess.run([train_op, avg_loss], feed_dict)
+	epoch_loss += loss_t
 
-		sequence = translate(token_list)
-		enc_inp = build_input(sequence[::-1])
-		response = predict(enc_inp)
-		sys.stdout.write('-->: ')
-		print_sentence(response)
-		print(' ')
+	count+=1
+	epoch_count+=1
+	pbar.update(1)
 
-		
-		
-sess.close()
+	if count%10 == 0:
+		pbar.set_description("Epoch "+str(reader.epoch) +": Loss: " + str(loss_t) + " Avg loss: " +str(epoch_loss/epoch_count) +" Count: "+ str(epoch_count * batch_size))
+
+print("Training Complete!")
