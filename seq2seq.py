@@ -44,7 +44,7 @@ output_size = projection_size
 #training params, truncated_norm will resample x > 2std; so when std = 0.1, the range of x is [-0.2, 0.2]
 truncated_std = 0.1
 keep_prob = 0.95
-max_epoch = 24
+max_epoch = 10
 norm_clip = 5
 
 #training params for adam
@@ -56,7 +56,7 @@ model_name = "p"+str(projection_size)+"_h"+str(hidden_size)+"_x"+str(num_layers)
 save_path = model_path+"/"+model_name
 
 load_model=False
-train=True
+train=False
 if not train: 
 	load_model = True
 
@@ -261,6 +261,7 @@ def translate(token_list):
 		else:
 			enc.append(reader.dict['[unk]'])
 	#dec will be append with 2 inside the model
+	print(enc)
 	return enc
 
 
