@@ -36,11 +36,12 @@ vocab_size = len(reader.dict)
 hidden_size = 512
 projection_size = 300
 embedding_size = 300
-num_layers = 3
+num_layers = 1
 
 # ouput_size for softmax layer
 output_size = projection_size
 
+keep_prob = 0.95
 beam_size = 10
 top_k = 10
 max_sequence_len = 20
@@ -61,7 +62,7 @@ targets = tf.placeholder(tf.int32, shape=(None, batch_size), name="targets")
 dec_inputs = tf.placeholder(tf.int32, shape=(None, batch_size), name="dec_inputs")
 
 #input embedding layers
-emb_weights = tf.Variable(tf.truncated_normal([vocab_size, embedding_size], stddev=truncated_std), name="emb_weights")
+emb_weights = tf.Variable(tf.truncated_normal([vocab_size, embedding_size]), name="emb_weights")
 enc_inputs_emb = tf.nn.embedding_lookup(emb_weights, enc_inputs, name="enc_inputs_emb")
 dec_inputs_emb = tf.nn.embedding_lookup(emb_weights, dec_inputs, name="dec_inputs_emb")
 
@@ -113,9 +114,9 @@ dec_outputs, dec_states = tf.nn.dynamic_rnn(cell = dec_cell,
 	scope="decoder")
 
 #output layers
-project_w = tf.Variable(tf.truncated_normal(shape=[output_size, embedding_size], stddev=truncated_std), name="project_w")
+project_w = tf.Variable(tf.truncated_normal(shape=[output_size, embedding_size]), name="project_w")
 project_b = tf.Variable(tf.constant(shape=[embedding_size], value = 0.1), name="project_b")
-softmax_w = tf.Variable(tf.truncated_normal(shape=[embedding_size, vocab_size], stddev=truncated_std), name="softmax_w")
+softmax_w = tf.Variable(tf.truncated_normal(shape=[embedding_size, vocab_size]), name="softmax_w")
 softmax_b = tf.Variable(tf.constant(shape=[vocab_size], value = 0.1), name="softmax_b")
 
 dec_outputs = tf.reshape(dec_outputs, [-1, output_size], name="dec_ouputs")
@@ -199,8 +200,6 @@ def predict(enc_inp):
 		if len(candidates) == 0:
 			break
 
-	if signal:
-		best_sequence = [signal] + best_sequence
 
 	return best_sequence[:-1]
 
