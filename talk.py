@@ -17,6 +17,11 @@ import numpy as np
 import os, sys, re
 import util.s2s_reader as s2s_reader
 
+
+data_path = "data"
+model_path = "output"
+
+
 expression = r"[0-9]+|[']*[\w]+"
 
 batch_size = 1
